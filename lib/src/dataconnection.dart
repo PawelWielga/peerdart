@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:peerdart/src/baseconnection.dart';
+import 'package:peerdart/src/data_channel_callback_installer.dart';
 import 'package:peerdart/src/enums.dart';
 import 'package:peerdart/src/logger.dart';
 import 'package:peerdart/src/negotiator.dart';
@@ -114,10 +115,17 @@ class DataConnection extends BaseConnection {
   }
 
   void _configureDataChannel() {
-    dataChannel?.onDataChannelState = (state) {
-      _handleRTCEvents(state);
+    final channel = dataChannel;
+    if (channel == null) return;
 
-      dataChannel?.onMessage = (message) {
+    installDataChannelCallbacks<RTCDataChannelMessage, RTCDataChannelState>(
+      installMessageHandler: (handler) {
+        channel.onMessage = handler;
+      },
+      installStateHandler: (handler) {
+        channel.onDataChannelState = handler;
+      },
+      onMessage: (message) {
         String? msg;
 
         if (!message.isBinary) {
@@ -126,8 +134,9 @@ class DataConnection extends BaseConnection {
 
         logger.log('DC#$connectionId dc onmessage:$msg');
         _handleDataMessage(message);
-      };
-    };
+      },
+      onState: _handleRTCEvents,
+    );
   }
 
   void _handleDataMessage(RTCDataChannelMessage message) {
