@@ -4,6 +4,13 @@ PeerDart provides a complete, configurable, and easy-to-use peer-to-peer API bui
 
 PeerDart **mirrors** the design of peerjs. Find the documentation [here](https://peerjs.com/docs)..
 
+## PeerJS compatibility
+
+The current `dev` branch of this fork (`peerdart` package version `0.5.4`) is tested for wire compatibility with **PeerJS 1.5.5** (`peerjs@1.5.5`).
+
+In particular, data connections using `serialization: 'json'` follow the PeerJS 1.5.5 wire format: JSON is encoded as UTF-8 and sent as a binary WebRTC DataChannel payload. The compatibility fix was introduced in commit `000856809db72d7f553d2346e1e63ef1a7be3b43`.
+
+Compatibility with older or newer PeerJS versions is not guaranteed until those versions are explicitly tested.
 
 ## Status
 
