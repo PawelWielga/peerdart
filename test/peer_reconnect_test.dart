@@ -49,7 +49,12 @@ void main() {
     );
 
     final originalSignalingSocket = peer.socket;
-    peer.disconnect();
+    final disconnectedFuture = peer.on<String?>('disconnected').first;
+    await firstSocket.close();
+    expect(
+      await disconnectedFuture.timeout(const Duration(seconds: 2)),
+      'peer-reconnect-test',
+    );
     expect(peer.disconnected, isTrue);
 
     final secondSocketFuture = acceptedSockets.stream.first;
