@@ -346,6 +346,7 @@ class Peer extends StreamEventEmitter {
         "Attempting reconnection to server with ID $_lastServerId",
       );
       _disconnected = false;
+      _socket = _createServerConnection();
       _initialize(_lastServerId!);
     } else if (destroyed) {
       throw Exception(

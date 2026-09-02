@@ -1,12 +1,13 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:peerdart/src/baseconnection.dart';
+import 'package:peerdart/src/data_channel_callback_installer.dart';
 import 'package:peerdart/src/enums.dart';
 import 'package:peerdart/src/logger.dart';
 import 'package:peerdart/src/negotiator.dart';
 import 'package:peerdart/src/option_interfaces.dart';
+import 'package:peerdart/src/peerjs_json_codec.dart';
 import 'package:peerdart/src/servermessage.dart';
 import 'package:peerdart/src/util.dart';
 
@@ -114,33 +115,43 @@ class DataConnection extends BaseConnection {
   }
 
   void _configureDataChannel() {
-    dataChannel?.onDataChannelState = (state) {
-      _handleRTCEvents(state);
+    final channel = dataChannel;
+    if (channel == null) return;
 
-      dataChannel?.onMessage = (message) {
-        String? msg;
-
-        if (!message.isBinary) {
-          msg = message.text;
-        }
-
-        logger.log('DC#$connectionId dc onmessage:$msg');
+    installDataChannelCallbacks<RTCDataChannelMessage, RTCDataChannelState>(
+      installMessageHandler: (handler) {
+        channel.onMessage = handler;
+      },
+      installStateHandler: (handler) {
+        channel.onDataChannelState = handler;
+      },
+      onMessage: (message) {
+        final messageDescription = message.isBinary ? '<binary>' : message.text;
+        logger.log('DC#$connectionId dc onmessage:$messageDescription');
         _handleDataMessage(message);
-      };
-    };
+      },
+      onState: _handleRTCEvents,
+    );
   }
 
   void _handleDataMessage(RTCDataChannelMessage message) {
-    final datatype = message.type;
+    try {
+      if (serialization == SerializationType.JSON) {
+        final Object? deserializedData = message.isBinary
+            ? decodePeerJsJsonBinaryPayload(message.binary)
+            : decodePeerJsJsonTextPayload(message.text);
+        super.emit('data', deserializedData);
+        return;
+      }
 
-    if (datatype == MessageType.text) {
-      dynamic deserializedData = jsonDecode(message.text);
-
-      super.emit('data', deserializedData);
-    }
-
-    if (datatype == MessageType.binary) {
-      super.emit<Uint8List>('binary', message.binary);
+      if (message.isBinary) {
+        super.emit<Uint8List>('binary', message.binary);
+      }
+    } catch (error) {
+      logger.error(
+        'DC#$connectionId failed to decode ${serialization.type} message: $error',
+      );
+      super.emit('error', error);
     }
   }
 
@@ -159,7 +170,8 @@ class DataConnection extends BaseConnection {
     }
 
     if (serialization == SerializationType.JSON) {
-      await dataChannel?.send(RTCDataChannelMessage(jsonEncode(data)));
+      final payload = encodePeerJsJsonPayload(data);
+      await dataChannel?.send(RTCDataChannelMessage.fromBinary(payload));
     }
   }
 
