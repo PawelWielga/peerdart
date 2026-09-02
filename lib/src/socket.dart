@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:events_emitter/emitters/stream_event_emitter.dart';
@@ -58,10 +59,9 @@ class Socket extends StreamEventEmitter {
       }
 
       logger.log("Socket closed.");
-
-      _cleanup();
-
+      _disconnected = true;
       emit<void>(SocketEventType.Disconnected.type, null);
+      _closeEmittersAfterCurrentEvent();
     });
 
     _sendQueuedMessages();
@@ -94,9 +94,9 @@ class Socket extends StreamEventEmitter {
       return;
     }
 
-    _cleanup();
-
     _disconnected = true;
+    _socket?.sink.close();
+    _closeEmittersAfterCurrentEvent();
   }
 
   void send(Map<String, dynamic> data) {
@@ -141,11 +141,7 @@ class Socket extends StreamEventEmitter {
     }
   }
 
-  void _cleanup() {
-    _disconnected = true;
-    _socket?.sink.close();
-
-    // Close all the emitters
-    close();
+  void _closeEmittersAfterCurrentEvent() {
+    scheduleMicrotask(close);
   }
 }
