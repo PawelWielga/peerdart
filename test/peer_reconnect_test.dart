@@ -40,7 +40,8 @@ void main() {
     addTearDown(peer.dispose);
 
     final firstOpenFuture = peer.on<String?>('open').first;
-    final firstSocket = await firstSocketFuture.timeout(const Duration(seconds: 2));
+    final firstSocket =
+        await firstSocketFuture.timeout(const Duration(seconds: 2));
     firstSocket.add(jsonEncode(<String, Object?>{'type': 'OPEN'}));
     expect(
       await firstOpenFuture.timeout(const Duration(seconds: 2)),
@@ -55,7 +56,8 @@ void main() {
     final secondOpenFuture = peer.on<String?>('open').first;
     peer.reconnect();
 
-    final secondSocket = await secondSocketFuture.timeout(const Duration(seconds: 2));
+    final secondSocket =
+        await secondSocketFuture.timeout(const Duration(seconds: 2));
     secondSocket.add(jsonEncode(<String, Object?>{'type': 'OPEN'}));
     expect(
       await secondOpenFuture.timeout(const Duration(seconds: 2)),
